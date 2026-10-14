@@ -183,6 +183,8 @@ class MainActivity:ComponentActivity(){
  var tab by remember{mutableStateOf(Tab.Dashboard)}
  var search by remember{mutableStateOf("")}
  var upload by remember{mutableStateOf(false)}
+  var replyFor by remember{mutableStateOf("")}
+  var replyText by remember{mutableStateOf("")}
  MaterialTheme(colorScheme=darkColorScheme(primary=Accent,background=Bg,surface=Panel,onSurface=Color.White,onBackground=Color.White,secondary=Muted)){
  Scaffold(containerColor=Bg,topBar={TopAppBar(title={Column{Text("YTDASH STUDIO",fontSize=10.sp,letterSpacing=2.sp,color=Muted);Text(tab.label,fontSize=21.sp,fontWeight=FontWeight.Bold)}},actions={IconButton(onClick=onConnect){Icon(Icons.Default.AccountCircle,"Connect account",tint=Color.White)}},colors=TopAppBarDefaults.topAppBarColors(containerColor=Bg))},
  bottomBar={NavigationBar(containerColor=Panel){Tab.entries.forEach{t->val icon=when(t){Tab.Dashboard->Icons.Default.Home;Tab.Analytics->Icons.Default.Analytics;Tab.Content->Icons.Default.VideoLibrary;Tab.Comments->Icons.Default.ChatBubbleOutline;Tab.Settings->Icons.Default.Settings};NavigationBarItem(selected=tab==t,onClick={tab=t},icon={Icon(icon,t.label)},label={Text(t.label,fontSize=9.sp)},colors=NavigationBarItemDefaults.colors(selectedIconColor=Accent,indicatorColor=Accent.copy(alpha=.14f),unselectedIconColor=Muted,selectedTextColor=Color.White,unselectedTextColor=Muted))}}},
