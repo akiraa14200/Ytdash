@@ -19,9 +19,9 @@ function encrypt(payload: unknown) {
   return JSON.stringify({ v: 1, alg: "A256GCM", iv: iv.toString("base64"), tag: c.getAuthTag().toString("base64"), data: data.toString("base64") });
 }
 function channelFromSession(request: Request): string | null {
-  const cookieMatch = (request.headers.get("cookie") || "").match(/(?:^|;\\s*)yt_dash_session=([^;]+)/);
+  const cookieMatch = (request.headers.get("cookie") || "").match(/(?:^|;\s*)yt_dash_session=([^;]+)/);
   const authorization = request.headers.get("authorization") || "";
-  const bearer = authorization.match(/^Bearer\\s+(.+)$/i)?.[1];
+  const bearer = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
   const rawSession = bearer || cookieMatch?.[1];
   if (!rawSession) return null;
   try {
