@@ -33,7 +33,8 @@ async function googleFetch(path: string, token: string) {
 
 function sessionChannel(request: Request): string | null {
   const cookie = request.headers.get("cookie") || "";
-  const value = cookie.match(/(?:^|; )yt_dash_session=([^;]+)/)?.[1];
+  const value = (request.headers.get("authorization") || "").match(/^Bearer\\s+(.+)$/i)?.[1]
+    || cookie.match(/(?:^|;\\s*)yt_dash_session=([^;]+)/)?.[1];
   if (!value) return null;
   try {
     const decoded = decodeURIComponent(value);
