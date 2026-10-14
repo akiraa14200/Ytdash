@@ -31,11 +31,40 @@ private val Accent=Color(0xFFFF555D)
 private enum class Tab(val label:String){Dashboard("Dashboard"),Analytics("Analytics"),Content("Content"),Comments("Comments"),Settings("Settings")}
 
 class MainActivity:ComponentActivity(){
- override fun onCreate(savedInstanceState:Bundle?){super.onCreate(savedInstanceState);window.statusBarColor=android.graphics.Color.rgb(13,13,16);window.navigationBarColor=android.graphics.Color.rgb(13,13,16);setContent{StudioApp{connect()}}}
- private fun connect(){val uri=Uri.parse("https://ytdash-z-hub.vercel.app/api/youtube/connect?native=1");try{CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(this,uri)}catch(_:Exception){startActivity(Intent(Intent.ACTION_VIEW,uri))}}
+ private var connectionStatus by mutableStateOf<String?>(null)
+
+ override fun onCreate(savedInstanceState:Bundle?){
+  super.onCreate(savedInstanceState)
+  handleOAuthIntent(intent)
+  window.statusBarColor=android.graphics.Color.rgb(13,13,16)
+  window.navigationBarColor=android.graphics.Color.rgb(13,13,16)
+  setContent{StudioApp(onConnect={connect()},connectionStatus=connectionStatus)}
+ }
+
+ override fun onNewIntent(intent:Intent){
+  super.onNewIntent(intent)
+  setIntent(intent)
+  handleOAuthIntent(intent)
+ }
+
+ private fun handleOAuthIntent(intent:Intent?){
+  val data=intent?.data ?: return
+  if(data.scheme!="ytdash" || data.host!="oauth" || data.path!="/callback") return
+  connectionStatus=when{
+   data.getQueryParameter("connected")=="1" -> "YouTube connected successfully. Authorization was saved."
+   data.getQueryParameter("error")!=null -> "Connection failed: ${data.getQueryParameter("error")?.replace('_',' ')}"
+   else -> "Returned from YouTube authorization."
+  }
+ }
+
+ private fun connect(){
+  val uri=Uri.parse("https://ytdash-ashy.vercel.app/api/youtube/connect?native=1")
+  try{CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(this,uri)}
+  catch(_:Exception){startActivity(Intent(Intent.ACTION_VIEW,uri))}
+ }
 }
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun StudioApp(onConnect:()->Unit){
+@Composable private fun StudioApp(onConnect:()->Unit,connectionStatus:String?){
  var tab by remember{mutableStateOf(Tab.Dashboard)}
  var search by remember{mutableStateOf("")}
  var upload by remember{mutableStateOf(false)}
@@ -44,6 +73,7 @@ class MainActivity:ComponentActivity(){
  bottomBar={NavigationBar(containerColor=Panel){Tab.entries.forEach{t->val icon=when(t){Tab.Dashboard->Icons.Default.Home;Tab.Analytics->Icons.Default.Analytics;Tab.Content->Icons.Default.VideoLibrary;Tab.Comments->Icons.Default.ChatBubbleOutline;Tab.Settings->Icons.Default.Settings};NavigationBarItem(selected=tab==t,onClick={tab=t},icon={Icon(icon,t.label)},label={Text(t.label,fontSize=9.sp)},colors=NavigationBarItemDefaults.colors(selectedIconColor=Accent,indicatorColor=Accent.copy(alpha=.14f),unselectedIconColor=Muted,selectedTextColor=Color.White,unselectedTextColor=Muted))}}},
  ){padding->LazyColumn(Modifier.fillMaxSize().padding(padding),contentPadding=PaddingValues(18.dp),verticalArrangement=Arrangement.spacedBy(15.dp)){
  item{Row(verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(8.dp).clip(CircleShape).background(Accent));Spacer(Modifier.width(8.dp));Text("CREATOR WORKSPACE",fontSize=10.sp,letterSpacing=1.5.sp,color=Muted);Spacer(Modifier.weight(1f));Text("NATIVE ANDROID",fontSize=9.sp,color=Muted)}}
+ if(connectionStatus!=null){item{Surface(color=Panel,shape=RoundedCornerShape(14.dp)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Icon(if(connectionStatus.startsWith("YouTube connected"))Icons.Default.CheckCircle else Icons.Default.Info,null,tint=if(connectionStatus.startsWith("YouTube connected"))Color(0xFF65D6A0) else Accent);Spacer(Modifier.width(10.dp));Text(connectionStatus,fontSize=12.sp,color=Color.White,lineHeight=17.sp)}}}}
  when(tab){
  Tab.Dashboard->{item{Text("Your channel,\nat a glance.",fontSize=32.sp,lineHeight=37.sp,fontWeight=FontWeight.Bold);Text("A native workspace for your creator workflow.",color=Muted,fontSize=13.sp,modifier=Modifier.padding(top=8.dp))};item{Surface(color=Panel,shape=RoundedCornerShape(20.dp)){Column(Modifier.fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Row(verticalAlignment=Alignment.CenterVertically){Box(Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(Accent.copy(alpha=.15f)),contentAlignment=Alignment.Center){Text("▶",color=Accent,fontSize=20.sp)};Spacer(Modifier.width(12.dp));Column{Text("Connect your channel",fontWeight=FontWeight.SemiBold);Text("Sign in to load real data",fontSize=11.sp,color=Muted)}};HorizontalDivider(color=Color.White.copy(alpha=.08f));Text("Channel metrics are not fabricated. Connect YouTube to request authorized data.",fontSize=12.sp,lineHeight=18.sp,color=Muted);Button(onClick=onConnect,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(13.dp),colors=ButtonDefaults.buttonColors(containerColor=Accent)){Text("Connect YouTube",fontWeight=FontWeight.Bold)}}}};item{Text("CHANNEL OVERVIEW",fontSize=10.sp,letterSpacing=1.5.sp,color=Muted,fontWeight=FontWeight.Bold)};item{Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){Metric("Views","—","Last 28 days",Modifier.weight(1f));Metric("Watch time","—","Hours",Modifier.weight(1f))}};item{Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){Metric("Subscribers","—","Current total",Modifier.weight(1f));Metric("Videos","—","Published uploads",Modifier.weight(1f))}};item{Text("QUICK ACTIONS",fontSize=10.sp,letterSpacing=1.5.sp,color=Muted,fontWeight=FontWeight.Bold)};item{Action("Manage videos","Search, review, and edit uploads",Icons.Default.VideoLibrary){tab=Tab.Content}};item{Action("Community inbox","Read and respond to comments",Icons.Default.ChatBubbleOutline){tab=Tab.Comments}};item{Action("Performance","Review channel analytics",Icons.Default.Analytics){tab=Tab.Analytics}}}
  Tab.Analytics->{item{Intro("Analytics","Channel performance from YouTube Analytics API.")};item{Metric("Views · 28 days","—","Waiting for authorized data",Modifier.fillMaxWidth())};item{Metric("Watch time","—","Hours · last 28 days",Modifier.fillMaxWidth())};item{Metric("Subscribers gained","—","Last 28 days",Modifier.fillMaxWidth())};item{Empty("No analytics loaded","Connect your channel to request real reporting data.",onConnect)}}
