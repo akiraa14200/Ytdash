@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -30,14 +30,34 @@ async function googleFetch(path: string, token: string) {
   return data;
 }
 
-export async function GET() {
+function sessionChannel(request: Request): string | null {
+  const cookie = request.headers.get("cookie") || "";
+  const value = cookie.match(/(?:^|; )yt_dash_session=([^;]+)/)?.[1];
+  if (!value) return null;
+  try {
+    const decoded = decodeURIComponent(value);
+    const parts = decoded.split(".");
+    if (parts.length !== 3) return null;
+    const [channelId, expiry, signature] = parts;
+    if (!channelId || Number(expiry) < Math.floor(Date.now() / 1000)) return null;
+    const key = encryptionKey();
+    const expected = createHmac("sha256", key).update(channelId + "." + expiry).digest();
+    const actual = Buffer.from(signature, "base64url");
+    if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return null;
+    return channelId;
+  } catch { return null; }
+}
+
+export async function GET(request: Request) {
   const empty = { connected: false };
+  const channelId = sessionChannel(request);
+  if (!channelId) return NextResponse.json(empty, { headers: { "Cache-Control": "no-store" } });
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceKey || !process.env.YOUTUBE_TOKEN_ENCRYPTION_KEY) return NextResponse.json(empty);
+  if (!supabaseUrl || !serviceKey || !process.env.YOUTUBE_TOKEN_ENCRYPTION_KEY) return NextResponse.json(empty, { headers: { "Cache-Control": "no-store" } });
   try {
     const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-    const { data, error } = await supabase.from("youtube_connections").select("channel_id,encrypted_tokens,updated_at").order("updated_at", { ascending: false }).limit(1).maybeSingle();
+    const { data, error } = await supabase.from("youtube_connections").select("channel_id,encrypted_tokens,updated_at").eq("channel_id", channelId).maybeSingle();
     if (error || !data?.encrypted_tokens) return NextResponse.json(empty);
     let tokens = decryptTokens(data.encrypted_tokens);
     const expiry = Number(tokens.obtained_at || 0) + Number(tokens.expires_in || 3600) * 1000 - 60000;
