@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createCipheriv, randomBytes } from "node:crypto";
+import { createCipheriv, createHmac, randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
@@ -57,6 +57,13 @@ export async function GET(request: Request) {
     const response = NextResponse.redirect(new URL("/?connected=1", origin));
     response.cookies.delete("yt_oauth_state");
     response.cookies.delete("yt_oauth_verifier");
+    const sessionExpiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
+    const sessionPayload = channel.id + "." + sessionExpiry;
+    const sessionKey = Buffer.from(process.env.YOUTUBE_TOKEN_ENCRYPTION_KEY || "", "base64");
+    const sessionSignature = createHmac("sha256", sessionKey).update(sessionPayload).digest("base64url");
+    response.cookies.set("yt_dash_session", sessionPayload + "." + sessionSignature, {
+      httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30
+    });
     return response;
   } catch {
     return fail("connection_failed");
