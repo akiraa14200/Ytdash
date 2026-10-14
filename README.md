@@ -54,6 +54,6 @@ Import `akiraa14200/Ytdash` into Vercel, configure all environment variables for
 - YouTube Analytics may return no rows until the API is enabled and access is available for the channel. Recent dates may have reporting delays.
 - Resumable upload uses a browser-to-YouTube upload session. The upload session URI is temporary and must not be saved or shared.
 - Before sign-in works on Vercel, configure all server environment variables in the `ytdash` Vercel project: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REDIRECT_URI`, and `YOUTUBE_TOKEN_ENCRYPTION_KEY`. Do not put service-role keys or client secrets in `NEXT_PUBLIC_` variables.
-- Set `YOUTUBE_REDIRECT_URI` to `https://ytdash-z-hub.vercel.app/api/youtube/callback` and add the exact same URL to the Google OAuth Web client. Enable YouTube Data API v3 and YouTube Analytics API in Google Cloud.
+- Set `YOUTUBE_REDIRECT_URI` to `https://ytdash-ashy.vercel.app/api/youtube/callback` and add the exact same URL to the Google OAuth Web client. Enable YouTube Data API v3 and YouTube Analytics API in Google Cloud.
 - After granting the expanded upload/comment permissions, reconnect the channel so Google issues a token with the new scopes. OAuth consent-screen verification/testing-user settings may be required depending on who will use the app.
 - This is an independent app, not an official Google product. Never commit secrets.
