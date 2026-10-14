@@ -58,17 +58,21 @@ export async function GET(request: Request) {
     const tokenPayload = { ...tokens, obtained_at: Date.now(), channel: { id: channel.id, title: channel.snippet?.title ?? "YouTube channel", thumbnail: channel.snippet?.thumbnails?.default?.url ?? null, subscribers: channel.statistics?.subscriberCount ?? null, views: channel.statistics?.viewCount ?? null, videos: channel.statistics?.videoCount ?? null } };
     const { error } = await supabase.from("youtube_connections").upsert({ channel_id: channel.id, encrypted_tokens: encryptTokens(tokenPayload), updated_at: new Date().toISOString() }, { onConflict: "channel_id" });
     if (error) return fail("connection_storage_failed");
-    const response = nativeApp
-      ? NextResponse.redirect(new URL("ytdash://oauth/callback?connected=1"))
-      : NextResponse.redirect(new URL("/?connected=1", origin));
-    response.cookies.delete("yt_oauth_state");
-    response.cookies.delete("yt_oauth_verifier");
-    response.cookies.delete("yt_oauth_native");
     const sessionExpiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
     const sessionPayload = channel.id + "." + sessionExpiry;
     const sessionKey = Buffer.from(process.env.YOUTUBE_TOKEN_ENCRYPTION_KEY || "", "base64");
     const sessionSignature = createHmac("sha256", sessionKey).update(sessionPayload).digest("base64url");
-    response.cookies.set("yt_dash_session", sessionPayload + "." + sessionSignature, {
+    const nativeSession = sessionPayload + "." + sessionSignature;
+    const nativeCallback = new URL("ytdash://oauth/callback");
+    nativeCallback.searchParams.set("connected", "1");
+    nativeCallback.searchParams.set("session", nativeSession);
+    const response = nativeApp
+      ? NextResponse.redirect(nativeCallback)
+      : NextResponse.redirect(new URL("/?connected=1", origin));
+    response.cookies.delete("yt_oauth_state");
+    response.cookies.delete("yt_oauth_verifier");
+    response.cookies.delete("yt_oauth_native");
+    response.cookies.set("yt_dash_session", nativeSession, {
       httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30
     });
     return response;
