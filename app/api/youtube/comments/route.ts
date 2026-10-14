@@ -5,7 +5,7 @@ export async function GET(request: Request) {
   try {
     const yt = await authorizedYouTube(request);
     const url = new URL(request.url);
-    const params = new URLSearchParams({ part: "snippet,replies", allThreadsRelatedToChannel: "true", maxResults: "50", order: url.searchParams.get("order") === "relevance" ? "relevance" : "time", textFormat: "plainText" });
+    const params = new URLSearchParams({ part: "snippet,replies", allThreadsRelatedToChannel: "true", channelId: yt.channelId, maxResults: "50", order: url.searchParams.get("order") === "relevance" ? "relevance" : "time", textFormat: "plainText" });
     const pageToken = url.searchParams.get("pageToken");
     if (pageToken) params.set("pageToken", pageToken);
     const data = await yt.google("youtube/v3/commentThreads?" + params.toString());

@@ -24,7 +24,8 @@ function encryptTokens(payload: unknown) {
   return JSON.stringify({ v: 1, alg: "A256GCM", iv: iv.toString("base64"), tag: cipher.getAuthTag().toString("base64"), data: encrypted.toString("base64") });
 }
 async function googleFetch(path: string, token: string) {
-  const response = await fetch("https://www.googleapis.com/" + path, { headers: { Authorization: "Bearer " + token }, cache: "no-store" });
+  const target = path.startsWith("https://") ? path : "https://www.googleapis.com/" + path;
+  const response = await fetch(target, { headers: { Authorization: "Bearer " + token }, cache: "no-store" });
   const data = await response.json();
   if (!response.ok) throw new Error(data.error?.message || "youtube_api_error");
   return data;
@@ -98,7 +99,7 @@ export async function GET(request: Request) {
         dimensions: "day",
         sort: "day"
       });
-      const report = await googleFetch("youtube/analytics/v2/reports?" + query.toString(), tokens.access_token);
+      const report = await googleFetch("https://youtubeanalytics.googleapis.com/v2/reports?" + query.toString(), tokens.access_token);
       const rows: unknown[][] = report.rows || [];
       analytics = {
         views: rows.reduce((sum, row) => sum + Number(row[1] || 0), 0).toLocaleString("en-US"),
