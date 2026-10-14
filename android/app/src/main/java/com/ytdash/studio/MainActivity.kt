@@ -78,11 +78,12 @@ class MainActivity:ComponentActivity(){
  private fun loadYouTubeData(days: String = analyticsDays) {
   val session = nativeSession ?: return
   analyticsDays = if (days in listOf("7","28","90","365")) days else "28"
+  val selectedDays = analyticsDays
   dataLoading = true
   dataError = null
   Thread {
    try {
-    val dashboard = apiGet("/api/youtube/data?days=" + analyticsDays, session)
+    val dashboard = apiGet("/api/youtube/data?days=" + selectedDays, session)
     val videos = apiGet("/api/youtube/videos", session)
     val comments = try { apiGet("/api/youtube/comments", session) } catch (_: Exception) { JSONObject() }
     val commentArray = comments.optJSONArray("items")
