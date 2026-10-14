@@ -19,14 +19,14 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const origin = process.env.APP_URL || url.origin;
   const cookieHeader = request.headers.get("cookie") ?? "";
-  const nativeApp = cookieHeader.match(/(?:^|;\\s*)yt_oauth_native=([^;]*)/)?.[1] === "1";
+  const nativeApp = cookieHeader.match(/(?:^|;\s*)yt_oauth_native=([^;]*)/)?.[1] === "1";
   const fail = (reason: string) => nativeApp
     ? NextResponse.redirect(new URL("ytdash://oauth/callback?error=" + encodeURIComponent(reason)))
     : NextResponse.redirect(new URL("/?error=" + encodeURIComponent(reason), origin));
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
-  const cookieState = cookieHeader.match(/(?:^|;\\s*)yt_oauth_state=([^;]*)/)?.[1];
-  const verifier = cookieHeader.match(/(?:^|;\\s*)yt_oauth_verifier=([^;]*)/)?.[1];
+  const cookieState = cookieHeader.match(/(?:^|;\s*)yt_oauth_state=([^;]*)/)?.[1];
+  const verifier = cookieHeader.match(/(?:^|;\s*)yt_oauth_verifier=([^;]*)/)?.[1];
   if (url.searchParams.has("error")) return fail("google_authorization_denied");
   if (!code || !state || !cookieState || decodeURIComponent(cookieState) !== state || !verifier) return fail("oauth_state_invalid");
   const clientId = process.env.YOUTUBE_CLIENT_ID;
