@@ -88,15 +88,19 @@ export async function GET(request: Request) {
 
     const channel = tokens.channel;
     const now = new Date();
-    const end = now.toISOString().slice(0, 10);
-    const startDate = new Date(now.getTime() - 28 * 86400000).toISOString().slice(0, 10);
+    const requestedDays = Number(new URL(request.url).searchParams.get("days") || 28);
+    const days = [7, 28, 90, 365].includes(requestedDays) ? requestedDays : 28;
+    // Analytics reports are more reliable through yesterday; today's totals can be incomplete.
+    const reportEnd = new Date(now.getTime() - 86400000);
+    const end = reportEnd.toISOString().slice(0, 10);
+    const startDate = new Date(reportEnd.getTime() - (days - 1) * 86400000).toISOString().slice(0, 10);
     let analytics: Record<string, unknown> = {};
     try {
       const query = new URLSearchParams({
         ids: "channel==MINE",
         startDate,
         endDate: end,
-        metrics: "views,estimatedMinutesWatched,subscribersGained",
+        metrics: "views,estimatedMinutesWatched,subscribersGained,likes,comments,shares,averageViewDuration",
         dimensions: "day",
         sort: "day"
       });
@@ -106,6 +110,14 @@ export async function GET(request: Request) {
         views: rows.reduce((sum, row) => sum + Number(row[1] || 0), 0).toLocaleString("en-US"),
         watchTime: Math.round(rows.reduce((sum, row) => sum + Number(row[2] || 0), 0) / 60).toLocaleString("en-US"),
         subscribers: "+" + rows.reduce((sum, row) => sum + Number(row[3] || 0), 0).toLocaleString("en-US"),
+        likes: rows.reduce((sum, row) => sum + Number(row[4] || 0), 0).toLocaleString("en-US"),
+        comments: rows.reduce((sum, row) => sum + Number(row[5] || 0), 0).toLocaleString("en-US"),
+        shares: rows.reduce((sum, row) => sum + Number(row[6] || 0), 0).toLocaleString("en-US"),
+        averageViewDuration: rows.length ? Math.round(rows.reduce((sum, row) => sum + Number(row[7] || 0), 0) / rows.length) : 0,
+        days,
+        startDate,
+        endDate: end,
+        daily: rows.map(row => ({ date: String(row[0] || ""), views: Number(row[1] || 0), watchMinutes: Number(row[2] || 0), subscribersGained: Number(row[3] || 0), likes: Number(row[4] || 0), comments: Number(row[5] || 0), shares: Number(row[6] || 0), averageViewDuration: Number(row[7] || 0) })),
         values: rows.map(row => Number(row[1] || 0))
       };
     } catch {
