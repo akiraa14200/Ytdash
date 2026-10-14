@@ -4,13 +4,15 @@ A responsive, dark Apple-inspired YouTube creator dashboard built with Next.js, 
 
 ## Included
 
-- Responsive creator workspace with Dashboard, Analytics, Content, Comments and Settings views
-- Mobile navigation, search, date-range toggle, notification popover and channel status
-- Clearly labelled preview data when no channel is connected
-- Google OAuth flow with state validation and PKCE
-- Server-side YouTube channel lookup and YouTube Analytics API requests
-- AES-256-GCM encryption for stored OAuth token payloads in the existing Supabase `youtube_connections` table
-- GitHub Actions build verification
+- Responsive dark creator workspace with Dashboard, Analytics, Content, Comments and Settings
+- Real authorized channel totals and YouTube Analytics daily reporting
+- Live upload-playlist video listing with thumbnails, statistics, visibility and publish dates
+- Edit video title, description and visibility through YouTube Data API
+- Start resumable uploads with title, description and privacy selection
+- Load comment threads, reply to comments, hold comments for review and delete comments
+- Google OAuth with state validation and PKCE; server-side token refresh and AES-256-GCM encrypted token storage
+- Mobile navigation, content search and visibility filters; no fabricated channel metrics
+- GitHub Actions type-check/build verification
 
 ## Run locally
 
@@ -46,9 +48,12 @@ The Supabase project must contain `public.youtube_connections(channel_id text pr
 
 Import `akiraa14200/Ytdash` into Vercel, configure all environment variables for the deployment environment, and set `YOUTUBE_REDIRECT_URI` to `https://YOUR_DOMAIN/api/youtube/callback`. Add that same callback URL to the Google OAuth client. Redeploy after changing environment variables.
 
-## Current integration boundaries
+## Integration boundaries and deployment checklist
 
-- Views and channel statistics use the authorized channel's YouTube API data. Analytics may be empty until YouTube Analytics API access is enabled for the Google Cloud project.
-- Content and comments currently provide the finished UI and preview rows; full list/edit/upload/reply/moderation operations are not yet wired to the YouTube API.
-- This is an independent app, not an official Google product. Google OAuth verification may be required before allowing external users to authorize production scopes.
-- Use a private repository for production source if you plan to keep implementation details private. Never commit secrets.
+- The app uses Google's public YouTube Data API and YouTube Analytics API. It is not Google's private YouTube Studio backend and cannot reproduce features that Google does not expose to third-party applications.
+- YouTube Analytics may return no rows until the API is enabled and access is available for the channel. Recent dates may have reporting delays.
+- Resumable upload uses a browser-to-YouTube upload session. The upload session URI is temporary and must not be saved or shared.
+- Before sign-in works on Vercel, configure all server environment variables in the `ytdash` Vercel project: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `YOUTUBE_REDIRECT_URI`, and `YOUTUBE_TOKEN_ENCRYPTION_KEY`. Do not put service-role keys or client secrets in `NEXT_PUBLIC_` variables.
+- Set `YOUTUBE_REDIRECT_URI` to `https://ytdash-z-hub.vercel.app/api/youtube/callback` and add the exact same URL to the Google OAuth Web client. Enable YouTube Data API v3 and YouTube Analytics API in Google Cloud.
+- After granting the expanded upload/comment permissions, reconnect the channel so Google issues a token with the new scopes. OAuth consent-screen verification/testing-user settings may be required depending on who will use the app.
+- This is an independent app, not an official Google product. Never commit secrets.
