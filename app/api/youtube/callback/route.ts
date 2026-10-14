@@ -18,11 +18,15 @@ function encryptTokens(payload: unknown) {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const origin = process.env.APP_URL || url.origin;
-  const fail = (reason: string) => NextResponse.redirect(new URL("/?error=" + encodeURIComponent(reason), origin));
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  const nativeApp = cookieHeader.match(/(?:^|;\\s*)yt_oauth_native=([^;]*)/)?.[1] === "1";
+  const fail = (reason: string) => nativeApp
+    ? NextResponse.redirect(new URL("ytdash://oauth/callback?error=" + encodeURIComponent(reason)))
+    : NextResponse.redirect(new URL("/?error=" + encodeURIComponent(reason), origin));
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
-  const cookieState = request.headers.get("cookie")?.match(/(?:^|; )yt_oauth_state=([^;]*)/)?.[1];
-  const verifier = request.headers.get("cookie")?.match(/(?:^|; )yt_oauth_verifier=([^;]*)/)?.[1];
+  const cookieState = cookieHeader.match(/(?:^|;\\s*)yt_oauth_state=([^;]*)/)?.[1];
+  const verifier = cookieHeader.match(/(?:^|;\\s*)yt_oauth_verifier=([^;]*)/)?.[1];
   if (url.searchParams.has("error")) return fail("google_authorization_denied");
   if (!code || !state || !cookieState || decodeURIComponent(cookieState) !== state || !verifier) return fail("oauth_state_invalid");
   const clientId = process.env.YOUTUBE_CLIENT_ID;
@@ -54,9 +58,12 @@ export async function GET(request: Request) {
     const tokenPayload = { ...tokens, obtained_at: Date.now(), channel: { id: channel.id, title: channel.snippet?.title ?? "YouTube channel", thumbnail: channel.snippet?.thumbnails?.default?.url ?? null, subscribers: channel.statistics?.subscriberCount ?? null, views: channel.statistics?.viewCount ?? null, videos: channel.statistics?.videoCount ?? null } };
     const { error } = await supabase.from("youtube_connections").upsert({ channel_id: channel.id, encrypted_tokens: encryptTokens(tokenPayload), updated_at: new Date().toISOString() }, { onConflict: "channel_id" });
     if (error) return fail("connection_storage_failed");
-    const response = NextResponse.redirect(new URL("/?connected=1", origin));
+    const response = nativeApp
+      ? NextResponse.redirect(new URL("ytdash://oauth/callback?connected=1"))
+      : NextResponse.redirect(new URL("/?connected=1", origin));
     response.cookies.delete("yt_oauth_state");
     response.cookies.delete("yt_oauth_verifier");
+    response.cookies.delete("yt_oauth_native");
     const sessionExpiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
     const sessionPayload = channel.id + "." + sessionExpiry;
     const sessionKey = Buffer.from(process.env.YOUTUBE_TOKEN_ENCRYPTION_KEY || "", "base64");
