@@ -20,7 +20,9 @@ export async function GET(request: Request) {
   url.searchParams.set("code_challenge", challenge);
   url.searchParams.set("code_challenge_method", "S256");
   const response = NextResponse.redirect(url);
+  const nativeApp = new URL(request.url).searchParams.get("native") === "1";
   response.cookies.set("yt_oauth_state", state, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 600 });
   response.cookies.set("yt_oauth_verifier", verifier, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 600 });
+  response.cookies.set("yt_oauth_native", nativeApp ? "1" : "0", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 600 });
   return response;
 }
